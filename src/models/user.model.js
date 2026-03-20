@@ -31,13 +31,7 @@ userSchema.pre("save", async function(){
 
 })
 
-userSchema.methods.generateAccessToken =  async function (){
-    return  jwt.sign({id:this._id},process.env.JWT_SECRET, {expiresIn:"15m"})
-}
 
-userSchema.methods.generateRefreshToken = async function(){
-    return jwt.sign({id:this._id},process.env.JWT_SECRET, {expiresIn:"7d"})
-}
  
 
 userSchema.methods.comaprePassword = async function (password){

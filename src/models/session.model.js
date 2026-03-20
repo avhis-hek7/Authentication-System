@@ -6,7 +6,7 @@ const sessionSchema = new mongoose.Schema({
         ref:"users",
         required:[true, "User is required"]
     },
-    refreshToken:{
+    refreshTokenHash:{
         type:String,
         required:[true, "Refresh Token is required"]
     },

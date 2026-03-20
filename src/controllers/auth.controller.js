@@ -1,5 +1,7 @@
 const userModel = require('../models/user.model');
 const jwt = require('jsonwebtoken');
+const sessionModel = require('../models/session.model');
+const crypto = require('crypto');
 
 async function userRegisterController (req,res){
 
@@ -25,9 +27,30 @@ async function userRegisterController (req,res){
     const user = await userModel.create({
         username, email, password
     })
+    const refreshToken = jwt.sign({
+        id:user._id},
+        process.env.JWT_SECRET,
+        {expiresIn:"7d"}
+    
+    )
 
-    const accessToken = await user.generateAccessToken();
-    const refreshToken = await user.generateRefreshToken();
+    const refreshTokenHash = crypto.createHash("sha256").update(refreshToken).digest('hex');
+
+    const session = await sessionModel.create({
+        user:user._id,
+        refreshTokenHash,
+        ip:req.ip,
+        userAgent: req.headers["user-agent"]
+
+    })
+
+     const accessToken = jwt.sign({
+        id:user._id, sessionId:session._id
+    },
+        process.env.JWT_SECRET,
+        {expiresIn:"15m"}
+    
+    )
 
     res.cookie("refreshToken", refreshToken, {
         httpOnly:true,
