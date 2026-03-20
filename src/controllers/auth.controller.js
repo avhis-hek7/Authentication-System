@@ -26,9 +26,16 @@ async function userRegisterController (req,res){
         username, email, password
     })
 
-    const token = await user.generateToken();
+    const accessToken = await user.generateAccessToken();
+    const refreshToken = await user.generateRefreshToken();
 
-    res.cookie(token, "token");
+    res.cookie("refreshToken", refreshToken, {
+        httpOnly:true,
+        secure:true,
+        sameSite:"strict",
+        maxAge: 7 * 24 * 60 * 60 * 1000  
+      })
+
 
     return res.status(201).json({
         message:"User created successfully",
@@ -37,7 +44,7 @@ async function userRegisterController (req,res){
             username:user.username,
             email:user.email
         },
-        token
+        accessToken
     })
 
 }
