@@ -68,6 +68,54 @@ async function getMeUseUserController (req,res){
     })
 }
 
+async function refreshTokenController(req,res){
+
+    const refreshToken = req.cookies.refreshToken;
+
+    if(!refreshToken){
+        return res.status(401).json({
+            message:"Refresh token is not found!"
+        })
+    }
+    const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET);
+
+    const accessToken = jwt.sign({
+        id:decoded.id
+    },
+    process.env.JWT_SECRET,
+    {
+        expiresIn:"15m"
+    })
+
+    const newRefreshToken = jwt.sign({
+        id:decoded.id
+    },
+    process.env.JWT_SECRET,
+    {
+        expiresIn:"7d"
+    })
+
+    res.cookie("refreshToken", newRefreshToken, {
+        httpOnly:true,
+        secure:true,
+        sameSite:"strict",
+        maxAge: 7 * 24 * 60 * 60 * 1000  
+      })
+     
 
 
-module.exports = {userRegisterController, getMeUseUserController}
+
+    
+
+    
+
+     res.status(200).json({
+        message:"Access token refresh successfully",
+        accessToken
+
+    })
+}
+
+
+
+module.exports = {userRegisterController, getMeUseUserController, refreshTokenController}
