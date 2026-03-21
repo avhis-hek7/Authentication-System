@@ -15,4 +15,6 @@ router.get('/logout',authContoller.logoutController);
 
 router.get('/logoutall',authContoller.logoutAllController);
 
+router.get('/verify-email', authContoller.verifyEmail);
+
 module.exports = router;

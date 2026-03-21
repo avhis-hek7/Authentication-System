@@ -2,6 +2,9 @@ const userModel = require('../models/user.model');
 const jwt = require('jsonwebtoken');
 const sessionModel = require('../models/session.model');
 const crypto = require('crypto');
+const sendEmail = require('../services/email.service');
+const {generateOtp, getOtpHtml} = require('../utils/utils');
+const otpModel = require('../models/otp.model');
 
 async function userRegisterController (req,res){
 
@@ -28,37 +31,22 @@ async function userRegisterController (req,res){
     const user = await userModel.create({
         username, email, password:hashedPassword
     })
-    const refreshToken = jwt.sign({
-        id:user._id},
-        process.env.JWT_SECRET,
-        {expiresIn:"7d"}
-    
-    )
 
-    const refreshTokenHash = crypto.createHash("sha256").update(refreshToken).digest('hex');
+    const otp = generateOtp();
+    const html = getOtpHtml(otp);
 
-    const session = await sessionModel.create({
-        user:user._id,
-        refreshTokenHash,
-        ip:req.ip,
-        userAgent: req.headers["user-agent"]
-
+    const otpHash = crypto.createHash("sha256").update(otp).digest("hex");
+    await otpModel.create({
+        email,
+        user: user._id,
+        otpHash
     })
 
-     const accessToken = jwt.sign({
-        id:user._id, sessionId:session._id
-    },
-        process.env.JWT_SECRET,
-        {expiresIn:"15m"}
-    
-    )
+    await sendEmail(email, "OTP Verification", `Your OTP code is ${otp}`, html)
+  
 
-    res.cookie("refreshToken", refreshToken, {
-        httpOnly:true,
-        secure:true,
-        sameSite:"strict",
-        maxAge: 7 * 24 * 60 * 60 * 1000  
-      })
+ 
+   
 
 
     return res.status(201).json({
@@ -66,9 +54,10 @@ async function userRegisterController (req,res){
         user:{
             _id:user._id,
             username:user.username,
-            email:user.email
-        },
-        accessToken
+            email:user.email,
+             verified:user.verified
+        }
+        
     })
 
 }
@@ -84,11 +73,11 @@ async function loginController(req, res) {
         })
     }
 
-    // if (!user.verified) {
-    //     return res.status(401).json({
-    //         message: "Email not verified"
-    //     })
-    // }
+    if (!user.verified) {
+        return res.status(401).json({
+            message: "Email not verified"
+        })
+    }
 
     const hashedPassword = crypto.createHash("sha256").update(password).digest("hex");
 
@@ -285,5 +274,39 @@ async function logoutAllController(req,res){
     })
 }
 
+async function verifyEmail(req, res) {
+    const { otp, email } = req.body
 
-module.exports = {userRegisterController, getMeUseUserController, refreshTokenController, logoutController, logoutAllController, loginController}
+    const otpHash = crypto.createHash("sha256").update(otp).digest("hex");
+
+    const otpDoc = await otpModel.findOne({
+        email,
+        otpHash
+    })
+
+    if (!otpDoc) {
+        return res.status(400).json({
+            message: "Invalid OTP"
+        })
+    }
+
+    const user = await userModel.findByIdAndUpdate(otpDoc.user, {
+        verified: true
+    })
+
+    await otpModel.deleteMany({
+        user: otpDoc.user
+    })
+
+    return res.status(200).json({
+        message: "Email verified successfully",
+        user: {
+            username: user.username,
+            email: user.email,
+            verified: user.verified
+        }
+    })
+}
+
+
+module.exports = {userRegisterController, getMeUseUserController, refreshTokenController, logoutController, logoutAllController, loginController, verifyEmail}
