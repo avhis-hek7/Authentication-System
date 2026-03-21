@@ -9,4 +9,6 @@ router.get('/get-me',authContoller.getMeUseUserController);
 
 router.get('/refresh-token', authContoller.refreshTokenController);
 
+router.get('/logout',authContoller.logoutController);
+
 module.exports = router;
