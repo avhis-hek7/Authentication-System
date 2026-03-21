@@ -72,6 +72,8 @@ async function userRegisterController (req,res){
 
 }
 
+
+
 async function getMeUseUserController (req,res){
     const token =  req.headers.authorization?.split(" ")[1];
     if(!token){
@@ -185,6 +187,30 @@ async function logoutController(req,res){
     })
 }
 
+async function logoutAllController(req,res){
+    const refreshToken = req.cookies.refreshToken;
+
+    if (!refreshToken) {
+        return res.status(400).json({
+            message: "Refresh token not found"
+        })
+    }
+
+    const decoded = jwt.verify(refreshToken, process.env.JWT_SECRET)
+
+    await sessionModel.updateMany({
+        user: decoded.id,
+        revoked: false
+    }, {
+        revoked: true
+    })
+
+    res.clearCookie("refreshToken")
+
+    res.status(200).json({
+        message: "Logged out from all devices successfully"
+    })
+}
 
 
-module.exports = {userRegisterController, getMeUseUserController, refreshTokenController, logoutController}
+module.exports = {userRegisterController, getMeUseUserController, refreshTokenController, logoutController, logoutAllController, loginController}
