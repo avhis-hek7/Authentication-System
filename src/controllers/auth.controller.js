@@ -23,9 +23,10 @@ async function userRegisterController (req,res){
             message:"User already exists with this email addresss!"
         })
     }
+     const hashedPassword = crypto.createHash("sha256").update(password).digest("hex");
 
     const user = await userModel.create({
-        username, email, password
+        username, email, password:hashedPassword
     })
     const refreshToken = jwt.sign({
         id:user._id},
@@ -79,7 +80,7 @@ async function loginController(req, res) {
 
     if (!user) {
         return res.status(401).json({
-            message: "Invalid email or password"
+            message: "User is not find"
         })
     }
 
@@ -92,10 +93,13 @@ async function loginController(req, res) {
     const hashedPassword = crypto.createHash("sha256").update(password).digest("hex");
 
     const isPasswordValid = hashedPassword === user.password;
+    console.log("Entered password:", password);
+console.log("Hashed input:", hashedPassword);
+console.log("Stored password:", user.password);
 
     if (!isPasswordValid) {
         return res.status(401).json({
-            message: "Invalid email or password"
+            message: "Password is  wrong"
         })
     }
 
